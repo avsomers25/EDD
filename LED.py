@@ -1,26 +1,22 @@
 import RPi.GPIO as GPIO
 import time
-#red at pin 5 (29)
-#blue at pin 6 (31)
-#green at pin 12 (32)
+import random
+
+red = 29
+green = 32
+blue = 31
 
 
-GPIO.SetupGPIO
-GPIO.PinMode(5,GPIO.OUTPUT)
-GPIO.PinMode(6,GPIO.OUTPUT)
-GPIO.PinMode(12,GPIO.OUTPUT)
- 
-GPIO.DigitalWrite(5,GPIO.OFF)
-GPIO.DigitalWrite(6,GPIO.OFF)
-GPIO.DigitalWrite(12,GPIO.OFF)
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup([red, green, blue], GPIO.OUT)
+GPIO.output([red, green, blue], GPIO.LOW)
 
-GPIO.DigitalWrite(5,GPIO.ON)
-GPIO.DigitalWrite(6,GPIO.ON)
-GPIO.DigitalWrite(12,GPIO.ON)
+if not random.randint(0, 1000):
+	GPIO.output(blue, GPIO.HIGH)
+else:
+	GPIO.output(green, GPIO.HIGH)
+time.sleep(2)
+GPIO.output([red, green, blue], GPIO.LOW)
+time.sleep(2)
 
-time.sleep(10)
-
-GPIO.DigitalWrite(5,GPIO.OFF)
-GPIO.DigitalWrite(6,GPIO.OFF)
-GPIO.DigitalWrite(12,GPIO.OFF)
-
+GPIO.cleanup([red, green, blue])
