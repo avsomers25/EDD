@@ -2,21 +2,33 @@ import RPi.GPIO as GPIO
 import time
 import random
 
-red = 29
-green = 32
-blue = 31
+red = 23
+green = 22
+blue = 24
+rgb = [red, green, blue]
 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(rgb, GPIO.OUT)
+GPIO.output(rgb, GPIO.LOW)
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup([red, green, blue], GPIO.OUT)
-GPIO.output([red, green, blue], GPIO.LOW)
-
-if not random.randint(0, 1000):
-	GPIO.output(blue, GPIO.HIGH)
-else:
-	GPIO.output(green, GPIO.HIGH)
+#Red
+GPIO.output(red, GPIO.HIGH)
 time.sleep(2)
-GPIO.output([red, green, blue], GPIO.LOW)
-time.sleep(2)
+GPIO.output(rgb, GPIO.LOW)
 
-GPIO.cleanup([red, green, blue])
+#Green
+GPIO.output(green, GPIO.HIGH)
+time.sleep(2)
+GPIO.output(rgb, GPIO.LOW)
+
+#Blue
+GPIO.output(blue, GPIO.HIGH)
+time.sleep(2)
+GPIO.output(rgb, GPIO.LOW)
+
+#White
+GPIO.output(rgb, GPIO.HIGH)
+time.sleep(2)
+GPIO.output(rgb, GPIO.LOW)
+
+GPIO.cleanup()
