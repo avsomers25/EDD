@@ -1,48 +1,58 @@
 #Import necessary libraries
 import RPi.GPIO as GPIO #For the LED
 from mfrc522 import SimpleMFRC522 #For the RFID communication
-import asyncio #For managing the queue
+import multiprocessing #For managing the queue
 import datetime #Current time
 import pytz #Timezones
 import time #Sleep
 
-#Setup LED
-LEDR = 23
-LEDG = 22
-LEDB = 24
-LED = [LEDR, LEDG, LEDB]
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LED, GPIO.OUT)
-GPIO.output(LED, GPIO.LOW)
-
-#Setup RFID
-reader = SimpleMFRC522()
-
-async def reporter(queue):
+def report(child):
 	while True:
-		text, tagTime = await queue.get()
-		print(f"{text} signed out at {tagTime}")
-		queue.task_done()
+		try:
+			text, tagTime = child.recv()
+			if text == "STOP":
+				break
+			else:
+				#Need to make the actual sheets functions here
+				time.sleep(5)
+				print(f"{text} signed out at {tagTime}")
+		#Need to figure out a better stop function
+		except KeyboardInterrupt:
+			pass
 
-async def readLoop():
+if __name__ == "__main__":
+	#Setup LED
+	LEDR = 23
+	LEDG = 22
+	LEDB = 24
+	LED = [LEDR, LEDG, LEDB]
+	GPIO.setmode(GPIO.BCM)
+	GPIO.setup(LED, GPIO.OUT)
+	GPIO.output(LED, GPIO.LOW)
+
+	#Setup RFID
+	reader = SimpleMFRC522()
+
 	#Setup queue
-	queue = asyncio.Queue()
-	asyncio.create_task(reporter(queue))
+	parent, child = multiprocessing.Pipe()
+	reporterThread = multiprocessing.Process(target=report, args=(child,))
+	reporterThread.start()
 	try:
 		while True:
 			print("Awaiting tag")
 			GPIO.output(LED, GPIO.LOW)
 			id, text = reader.read()
+			#Need to add error handling here
 			GPIO.output(LED, (GPIO.HIGH, GPIO.HIGH, GPIO.LOW))
 			tagTime = datetime.datetime.now(pytz.timezone("America/New_York"))
-			await queue.put((text, tagTime))
+			parent.send((text, tagTime))
 			GPIO.output(LEDR, GPIO.LOW)
-			time.sleep(2)
+			time.sleep(1)
 	except KeyboardInterrupt:
 		GPIO.output(LED, (GPIO.LOW, GPIO.LOW, GPIO.HIGH))
-		await queue.join()
+		parent.send(("STOP", ""))
+		reporterThread.join()
+		parent.close()
 		GPIO.output(LED, (GPIO.LOW, GPIO.HIGH, GPIO.LOW))
 		time.sleep(1)
 		GPIO.cleanup()
-
-asyncio.run(readLoop())
