@@ -1,10 +1,23 @@
 #Import necessary libraries
-import RPi.GPIO as GPIO #For the LED
+ #For the LED
 from mfrc522 import SimpleMFRC522 #For the RFID communication
 import multiprocessing #For managing the queue
 import datetime #Current time
 import pytz #Timezones
 import time #Sleep
+import csv #CSV 
+
+def IDtoNAME(idnum):
+    name = ""
+
+    with open('student_ids.csv', newline='') as csvfile:
+        spamreader = csv.reader(csvfile)
+        for row in spamreader:
+            if row[0] == str(idnum):
+                name = row[1]
+                print(name)
+
+    return name
 
 def report(child):
 	while True:
