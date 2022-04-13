@@ -3,8 +3,6 @@ import csv
 
 
 def IDtoNAME(idnum):
-    name = ""
-
     with open('student_ids.csv', newline='') as csvfile:
         spamreader = csv.reader(csvfile)
         for row in spamreader:

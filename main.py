@@ -8,8 +8,6 @@ import time #Sleep
 import csv #CSV 
 
 def IDtoNAME(idnum):
-    name = ""
-
     with open('student_ids.csv', newline='') as csvfile:
         spamreader = csv.reader(csvfile)
         for row in spamreader:
