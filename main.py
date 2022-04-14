@@ -10,13 +10,14 @@ import csv #CSV
 def IDtoNAME(idnum):
     with open('student_ids.csv', newline='') as csvfile:
         spamreader = csv.reader(csvfile)
+        idnum = str(idnum)
         for row in spamreader:
-            if row[0] == str(idnum):
+            if row[0] == idnum:
                 name = row[1]
-                print(name)
+                break
 
     return name
-
+	
 def report(child):
 	while True:
 		try:
