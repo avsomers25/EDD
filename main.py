@@ -1,13 +1,21 @@
 #Import necessary libraries
- #For the LED
-from mfrc522 import SimpleMFRC522 #For the RFID communication
-import multiprocessing #For managing the queue
-import datetime #Current time
+import RPi.GPIO as GPIO #LED Interface
+from mfrc522 import SimpleMFRC522 #RFID Communication
+import multiprocessing #Queue
+import datetime #Current Time
 import pytz #Timezones
 import time #Sleep
-import csv #CSV 
+import csv #CSV Reader
 
-def IDtoNAME(idnum):
+#Google Sheets libraries
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+def id2name(idnum):
     with open('student_ids.csv', newline='') as csvfile:
         spamreader = csv.reader(csvfile)
         idnum = str(idnum)
@@ -15,9 +23,8 @@ def IDtoNAME(idnum):
             if row[0] == idnum:
                 name = row[1]
                 break
-
     return name
-	
+
 def report(child):
 	while True:
 		try:
@@ -25,14 +32,31 @@ def report(child):
 			if text == "STOP":
 				break
 			else:
+				sid = text.rstrip()
+				name = id2name(sid)
 				#Need to make the actual sheets functions here
 				time.sleep(5)
-				print(f"{text} signed out at {tagTime}")
+				print(f"{sid}:{name} signed out at {tagTime}")
 		#Need to figure out a better stop function
 		except KeyboardInterrupt:
 			pass
 
 if __name__ == "__main__":
+	#Setup Google Sheets
+	SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+	SPREADSHEET_ID = '1QbBu2w8edM74y4hWAWeEmzG8FQika9F9uLVoelOAIFY'
+	creds = None
+	if os.path.exists('token.json'):
+		creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+	if not creds or not creds.valid:
+		if creds and creds.expired and creds.refresh_token:
+			creds.refresh(Request())
+		else:
+			flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+			creds = flow.run_local_server(port=0)
+		with open('token.json', 'w') as token:
+			token.write(creds.to_json())
+
 	#Setup LED
 	LEDR = 23
 	LEDG = 22
