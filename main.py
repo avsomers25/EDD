@@ -15,6 +15,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+#Convert student id from PICC to name in csv
 def id2name(idnum):
     with open('student_ids.csv', newline='') as csvfile:
         spamreader = csv.reader(csvfile)
@@ -25,7 +26,10 @@ def id2name(idnum):
                 break
     return name
 
-def report(child):
+#Queue that handles sending scans to the spreadsheet
+#Runs asynchronously from the reader so that both can operate at the same time
+def report(child, creds):
+	SPREADSHEET_ID = '1QbBu2w8edM74y4hWAWeEmzG8FQika9F9uLVoelOAIFY'
 	while True:
 		try:
 			text, tagTime = child.recv()
@@ -34,17 +38,25 @@ def report(child):
 			else:
 				sid = text.rstrip()
 				name = id2name(sid)
-				#Need to make the actual sheets functions here
-				time.sleep(5)
-				print(f"{sid}:{name} signed out at {tagTime}")
-		#Need to figure out a better stop function
+				service = build('sheets', 'v4', credentials=creds)
+				result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range="Sheet1", majorDimension="COLUMNS", valueRenderOption="UNFORMATTED_VALUE", dateTimeRenderOption="FORMATTED_STRING").execute()['values']
+				direction = "Out"
+				index = -1
+				for i in range(len(result[0])):
+					if str(result[4][i]) == sid and result[0][i][:11] == tagTime[:11]:
+						index = i
+				if index >= 0 and result[3][index] == "Out":
+					direction = "In"
+
+				values = [[tagTime, name.split(' ')[1], name.split(' ')[0], direction, sid]]
+				body = {'values': values}
+				service.spreadsheets().values().append(spreadsheetId=SPREADSHEET_ID, range="A2", valueInputOption="RAW", body=body).execute()
 		except KeyboardInterrupt:
 			pass
 
 if __name__ == "__main__":
 	#Setup Google Sheets
 	SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-	SPREADSHEET_ID = '1QbBu2w8edM74y4hWAWeEmzG8FQika9F9uLVoelOAIFY'
 	creds = None
 	if os.path.exists('token.json'):
 		creds = Credentials.from_authorized_user_file('token.json', SCOPES)
@@ -71,19 +83,20 @@ if __name__ == "__main__":
 
 	#Setup queue
 	parent, child = multiprocessing.Pipe()
-	reporterThread = multiprocessing.Process(target=report, args=(child,))
+	reporterThread = multiprocessing.Process(target=report, args=(child,creds))
 	reporterThread.start()
 	try:
+		#Read loop
 		while True:
 			print("Awaiting tag")
 			GPIO.output(LED, GPIO.LOW)
 			id, text = reader.read()
-			#Need to add error handling here
 			GPIO.output(LED, (GPIO.HIGH, GPIO.HIGH, GPIO.LOW))
-			tagTime = datetime.datetime.now(pytz.timezone("America/New_York"))
+			tagTime = datetime.datetime.now(pytz.timezone("America/New_York")).strftime("%b %d, %Y at %H:%M:%S %Z")
 			parent.send((text, tagTime))
 			GPIO.output(LEDR, GPIO.LOW)
 			time.sleep(1)
+	#Shutdown protocol
 	except KeyboardInterrupt:
 		GPIO.output(LED, (GPIO.LOW, GPIO.LOW, GPIO.HIGH))
 		parent.send(("STOP", ""))
