@@ -95,7 +95,7 @@ if __name__ == "__main__":
 			tagTime = datetime.datetime.now(pytz.timezone("America/New_York")).strftime("%b %d, %Y at %H:%M:%S %Z")
 			parent.send((text, tagTime))
 			GPIO.output(LEDR, GPIO.LOW)
-			time.sleep(1)
+			time.sleep(2.5)
 	#Shutdown protocol
 	except KeyboardInterrupt:
 		GPIO.output(LED, (GPIO.LOW, GPIO.LOW, GPIO.HIGH))
