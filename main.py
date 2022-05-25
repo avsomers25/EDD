@@ -32,12 +32,14 @@ def report(child, creds):
 	SPREADSHEET_ID = '1QbBu2w8edM74y4hWAWeEmzG8FQika9F9uLVoelOAIFY'
 	while True:
 		try:
-			text, tagTime = child.recv()
+			text, tagTime = child.recv() #Receive data from reader
 			if text == "STOP":
 				break
 			else:
 				sid = text.rstrip()
 				name = id2name(sid)
+
+				#Read data from sheet to see status of student
 				service = build('sheets', 'v4', credentials=creds)
 				result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range="Sheet1", majorDimension="COLUMNS", valueRenderOption="UNFORMATTED_VALUE", dateTimeRenderOption="FORMATTED_STRING").execute()['values']
 				direction = "Out"
@@ -48,6 +50,7 @@ def report(child, creds):
 				if index >= 0 and result[3][index] == "Out":
 					direction = "In"
 
+				#Write new entry to sheet
 				values = [[tagTime, name.split(' ')[1], name.split(' ')[0], direction, sid]]
 				body = {'values': values}
 				service.spreadsheets().values().append(spreadsheetId=SPREADSHEET_ID, range="A2", valueInputOption="RAW", body=body).execute()
@@ -93,9 +96,10 @@ if __name__ == "__main__":
 			id, text = reader.read()
 			GPIO.output(LED, (GPIO.HIGH, GPIO.HIGH, GPIO.LOW))
 			tagTime = datetime.datetime.now(pytz.timezone("America/New_York")).strftime("%b %d, %Y at %H:%M:%S %Z")
-			parent.send((text, tagTime))
+			parent.send((text, tagTime)) #Send data to reporter loop
 			GPIO.output(LEDR, GPIO.LOW)
 			time.sleep(2.5)
+			
 	#Shutdown protocol
 	except KeyboardInterrupt:
 		GPIO.output(LED, (GPIO.LOW, GPIO.LOW, GPIO.HIGH))
